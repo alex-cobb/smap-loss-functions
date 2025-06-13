@@ -3,8 +3,16 @@
 """Script dispatch for calculating loss functions"""
 
 import argparse
+import logging
 import pathlib
 import sys
+
+
+logging.basicConfig(
+    level=logging.WARNING,
+    stream=sys.stderr,
+    format='%(levelname)s:%(name)s:%(message)s',
+)
 
 
 def main():
@@ -16,6 +24,7 @@ def main():
     add_dump_ease_raster_data_subparser(subparsers)
     add_imerg_to_geotiff_subparser(subparsers)
     add_write_smap_db_subparser(subparsers)
+    add_fit_loss_functions_subparser(subparsers)
     args = parser.parse_args()
     if hasattr(args, 'func'):
         return args.func(args)
@@ -193,3 +202,31 @@ def write_smap_db_cli(args):
         return write_smap_db(
             smap_infile=smap_infile, imerg_infile=imerg_infile, connection=connection
         )
+
+
+def add_fit_loss_functions_subparser(subparsers):
+    """Add subparser for fit-loss-functions"""
+    parser = subparsers.add_parser('fit-loss-functions', help='Fit SMAP loss functions')
+    parser.add_argument('in_db', metavar='DBIN', help='Path to SMAP and IMERG db')
+    parser.add_argument(
+        'out_db',
+        metavar='DBOUT',
+        help='Path to output db to store loss functions',
+        type=pathlib.Path,
+    )
+    parser.set_defaults(func=fit_loss_functions_cli)
+
+
+def fit_loss_functions_cli(args):
+    """CLI for fit-loss-functions"""
+    import sqlite3
+    from .fit_loss_functions import set_up_loss_function_db, fit_loss_functions
+
+    if args.out_db.exists():
+        args.out_db.unlink()
+    with (
+        sqlite3.connect(f'file:{args.in_db}?mode=ro', uri=True) as in_connection,
+        sqlite3.connect(args.out_db) as out_connection,
+    ):
+        set_up_loss_function_db(out_connection)
+        return fit_loss_functions(in_connection, out_connection)
