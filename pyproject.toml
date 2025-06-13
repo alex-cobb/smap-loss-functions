@@ -1,0 +1,54 @@
+[project]
+name = "smap_loss_functions"
+version = "0.1.0"
+authors = [
+  { name="Alex Cobb", email="alexander.cobb@ntu.edu.sg" },
+]
+description = "SMAP loss functions after Koster et al (2017), doi:10.1175/jhm-d-16-0285.1"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "ease_lonlat",
+    "gdal",
+    "h5py",
+    "matplotlib",
+    "netCDF4",
+    "numpy",
+    "ogr",
+    "pyproj",
+    "scipy",
+]
+
+[project.urls]
+Homepage = "https://github.com/alex-cobb/smap-loss-functions"
+Issues = "https://github.com/alex-cobb/smap-loss-functions/issues"
+
+[project.scripts]
+smap-loss-functions = "smap_loss_functions.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["smap_loss_functions*"]
+
+[tool.pytest.ini_options]
+# Pytest configuration options
+# addopts = "--strict-markers" # Uncomment to make undefined markers an error
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "smap_loss_functions/test",
+]
+
+[tool.black]
+# Black code formatter configuration
+line-length = 79
+skip-string-normalization = true
