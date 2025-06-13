@@ -15,6 +15,7 @@ def main():
     add_smap_to_raster_template_subparser(subparsers)
     add_dump_ease_raster_data_subparser(subparsers)
     add_imerg_to_geotiff_subparser(subparsers)
+    add_write_smap_db_subparser(subparsers)
     args = parser.parse_args()
     if hasattr(args, 'func'):
         return args.func(args)
@@ -156,3 +157,39 @@ def imerg_to_geotiff_cli(args):
 
     with netCDF4.Dataset(args.infile) as nc_dataset:
         return imerg_to_geotiff(nc_dataset=nc_dataset, outfile_name=args.outfile)
+
+
+def add_write_smap_db_subparser(subparsers):
+    """Add subparser for write-smap-db"""
+    parser = subparsers.add_parser(
+        'write-smap-db', help='Write SMAP and IMERG data to an SQLite database'
+    )
+    parser.add_argument(
+        'smap_data',
+        metavar='SMAP',
+        help='SMAP data as CSV',
+        type=argparse.FileType('rt', encoding='ascii'),
+    )
+    parser.add_argument(
+        'imerg_data',
+        metavar='IMERG',
+        help='IMERG data as CSV',
+        type=argparse.FileType('rt', encoding='ascii'),
+    )
+    parser.add_argument('outfile', metavar='SQLITE', help='Output SQLite database')
+    parser.set_defaults(func=write_smap_db_cli)
+
+
+def write_smap_db_cli(args):
+    """CLI for write-smap-db"""
+    import sqlite3
+    from .write_smap_db import write_smap_db
+
+    with (
+        args.smap_data as smap_infile,
+        args.imerg_data as imerg_infile,
+        sqlite3.connect(args.outfile) as connection,
+    ):
+        return write_smap_db(
+            smap_infile=smap_infile, imerg_infile=imerg_infile, connection=connection
+        )
