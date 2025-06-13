@@ -3,6 +3,7 @@
 """Script dispatch for calculating loss functions"""
 
 import argparse
+import pathlib
 
 
 def main():
@@ -10,6 +11,7 @@ def main():
     parser = argparse.ArgumentParser(description='SMAP Loss Functions CLI')
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
     add_choose_ease_grid_subparser(subparsers)
+    add_smap_to_raster_template_subparser(subparsers)
     args = parser.parse_args()
     if hasattr(args, 'func'):
         return args.func(args)
@@ -66,4 +68,30 @@ def choose_ease_grid_cli(args):
             outfile=outfile,
             col_outfile_path=args.cols,
             row_outfile_path=args.rows,
+        )
+
+
+def add_smap_to_raster_template_subparser(subparsers):
+    parser = subparsers.add_parser(
+        'smap-to-raster-template',
+        help='Export soil moisture from a SMAP file to a raster template',
+    )
+    parser.add_argument('col_file', type=pathlib.Path, metavar='COLTIF')
+    parser.add_argument('row_file', type=pathlib.Path, metavar='ROWTIF')
+    parser.add_argument('infile', type=pathlib.Path, metavar='HDF5')
+    parser.add_argument('outfile', type=pathlib.Path, metavar='OUTTIF')
+    parser.set_defaults(func=smap_to_raster_template_cli)
+
+
+def smap_to_raster_template_cli(args):
+    """CLI to smap-to-raster-template"""
+    import h5py
+    from .smap_to_raster_template import smap_to_raster_template
+
+    with h5py.File(args.infile, 'r') as h5_dataset:
+        return smap_to_raster_template(
+            h5_dataset=h5_dataset,
+            colfile_path=args.col_file,
+            rowfile_path=args.row_file,
+            outfile_path=args.outfile,
         )
