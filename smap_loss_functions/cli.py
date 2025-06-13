@@ -14,6 +14,7 @@ def main():
     add_choose_ease_grid_subparser(subparsers)
     add_smap_to_raster_template_subparser(subparsers)
     add_dump_ease_raster_data_subparser(subparsers)
+    add_imerg_to_geotiff_subparser(subparsers)
     args = parser.parse_args()
     if hasattr(args, 'func'):
         return args.func(args)
@@ -136,3 +137,22 @@ def dump_ease_raster_data_cli(args):
             infile_list=infile_list,
             outfile=outfile,
         )
+
+
+def add_imerg_to_geotiff_subparser(subparsers):
+    """Add subparser for imerg-to-geotiff"""
+    parser = subparsers.add_parser(
+        'imerg-to-geotiff', help='Convert IMERG GPM data to GeoTIFF format'
+    )
+    parser.add_argument('infile')
+    parser.add_argument('outfile')
+    parser.set_defaults(func=imerg_to_geotiff_cli)
+
+
+def imerg_to_geotiff_cli(args):
+    """CLI for imerg-to-geotiff"""
+    import netCDF4
+    from .imerg_to_geotiff import imerg_to_geotiff
+
+    with netCDF4.Dataset(args.infile) as nc_dataset:
+        return imerg_to_geotiff(nc_dataset=nc_dataset, outfile_name=args.outfile)
