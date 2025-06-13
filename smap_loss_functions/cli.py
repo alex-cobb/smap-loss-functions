@@ -4,6 +4,7 @@
 
 import argparse
 import pathlib
+import sys
 
 
 def main():
@@ -12,6 +13,7 @@ def main():
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
     add_choose_ease_grid_subparser(subparsers)
     add_smap_to_raster_template_subparser(subparsers)
+    add_dump_ease_raster_data_subparser(subparsers)
     args = parser.parse_args()
     if hasattr(args, 'func'):
         return args.func(args)
@@ -72,6 +74,7 @@ def choose_ease_grid_cli(args):
 
 
 def add_smap_to_raster_template_subparser(subparsers):
+    """Add subparser for smap-to-raster-template"""
     parser = subparsers.add_parser(
         'smap-to-raster-template',
         help='Export soil moisture from a SMAP file to a raster template',
@@ -94,4 +97,42 @@ def smap_to_raster_template_cli(args):
             colfile_path=args.col_file,
             rowfile_path=args.row_file,
             outfile_path=args.outfile,
+        )
+
+
+def add_dump_ease_raster_data_subparser(subparsers):
+    """Add subparser for dump-ease-raster-data"""
+    parser = subparsers.add_parser(
+        'dump-ease-raster-data', help='Dump data from EASE 2.0 grid rasters'
+    )
+    parser.add_argument('col_file', type=pathlib.Path, metavar='COLTIF')
+    parser.add_argument('row_file', type=pathlib.Path, metavar='ROWTIF')
+    parser.add_argument(
+        '-f',
+        '--file-list',
+        type=argparse.FileType('rt', encoding='utf-8'),
+        metavar='HDF5',
+        default=sys.stdin,
+    )
+    parser.add_argument(
+        '-o',
+        '--outfile',
+        type=argparse.FileType('wt', encoding='ascii'),
+        metavar='OUTTIF',
+        default=sys.stdout,
+    )
+    parser.set_defaults(func=dump_ease_raster_data_cli)
+
+
+def dump_ease_raster_data_cli(args):
+    """CLI for dump-ease-raster-data"""
+    from .dump_ease_raster_data import dump_ease_raster_data
+
+    with args.file_list as infile, args.outfile as outfile:
+        infile_list = [line.strip() for line in infile.readlines() if line.strip()]
+        return dump_ease_raster_data(
+            colfile_path=args.col_file,
+            rowfile_path=args.row_file,
+            infile_list=infile_list,
+            outfile=outfile,
         )
