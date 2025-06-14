@@ -176,11 +176,19 @@ The calculations in this package are based on the following paper:
 
 SMAP L3 soil moisture data can be found via this DOI:
 
-  * O'Neill, P. E., S. Chan, E. G. Njoku, T. Jackson, R. Bindlish, J. Chaubell, and A. Colliander. 2021. SMAP Enhanced L3 Radiometer Global and Polar Grid Daily 9 km EASE-Grid Soil Moisture, Version 5. Boulder, Colorado USA. NASA National Snow and Ice Data Center Distributed Active Archive Center. doi:10.5067/4DQ54OUIJ9DL.
+  * O'Neill, P. E., Chan, S., Njoku, E. G., Jackson, T., Bindlish, R. & Chaubell,
+    J. (2023). SMAP L2 Radiometer Half-Orbit 36 km EASE-Grid Soil Moisture. (SPL2SMP,
+    Version 9). Boulder, Colorado USA. NASA National Snow and Ice Data Center
+    Distributed Active Archive
+    Center. [doi:10.5067/K7Y2D8QQVZ4L](https://doi.org/10.5067/K7Y2D8QQVZ4L).
 
 The package scripts facilitate work with daily precipitation data from GPM IMERG:
 
-  * Huffman, G. J., Stocker, E. F., Bolvin, D. T., Nelkin, E. J., Tan, Jackson. (2024). GPM IMERG Final Precipitation L3 1 day 0.1 degree x 0.1 degree V07. Research Data Archive at the National Center for Atmospheric Research, Computational and Information Systems Laboratory. https://doi.org/10.5065/7DE2-M746.
+  * Huffman, G.J., E.F. Stocker, D.T. Bolvin, E.J. Nelkin, Jackson Tan (2023), GPM IMERG
+    Final Precipitation L3 1 day 0.1 degree x 0.1 degree V07, Edited by Andrey
+    Savtchenko, Greenbelt, MD, Goddard Earth Sciences Data and Information Services
+    Center (GES
+    DISC). [doi:10.5067/GPM/IMERGDF/DAY/07](https://doi.org/10.5067/GPM/IMERGDF/DAY/07).
 
 ## Contributing
 
