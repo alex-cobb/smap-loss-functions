@@ -13,6 +13,7 @@ logging.basicConfig(
     stream=sys.stderr,
     format='%(levelname)s:%(name)s:%(message)s',
 )
+LOG = logging.getLogger('smap_loss_functions.cli')
 
 
 def main():
@@ -25,6 +26,7 @@ def main():
     add_imerg_to_geotiff_subparser(subparsers)
     add_write_smap_db_subparser(subparsers)
     add_fit_loss_functions_subparser(subparsers)
+    add_forecast_smap_subparser(subparsers)
     args = parser.parse_args()
     if hasattr(args, 'func'):
         return args.func(args)
@@ -230,3 +232,42 @@ def fit_loss_functions_cli(args):
     ):
         set_up_loss_function_db(out_connection)
         return fit_loss_functions(in_connection, out_connection)
+
+
+def add_forecast_smap_subparser(subparsers):
+    """Add subparser for forecast-smap"""
+    parser = subparsers.add_parser(
+        'forecast-smap',
+        help='Forecast SMAP soil moisture over 5 days with zero precipitation',
+    )
+    parser.add_argument(
+        'loss_function_db',
+        metavar='LOSSDB',
+        help='Path to loss function database',
+    )
+    parser.add_argument(
+        'smap_data_db',
+        metavar='SMAPDB',
+        help='Path to SMAP database with initial soil moisture',
+    )
+    parser.add_argument(
+        'forecast_db',
+        metavar='OUTPUTDB',
+        help='Path to new SQLite database to which to write soil moisture forecasts',
+    )
+    parser.set_defaults(func=forecast_smap_cli)
+
+
+def forecast_smap_cli(args):
+    """CLI for forecast-smap"""
+    import os
+    from .forecast_smap import forecast_smap
+
+    if os.path.exists(args.forecast_db):
+        LOG.info('%s exists, removing', args.forecast_db)
+        os.remove(args.forecast_db)
+    return forecast_smap(
+        loss_function_db_path=args.loss_function_db,
+        smap_db_path=args.smap_data_db,
+        forecast_db_path=args.forecast_db,
+    )
