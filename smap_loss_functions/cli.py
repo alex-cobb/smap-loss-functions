@@ -27,6 +27,7 @@ def main():
     add_write_smap_db_subparser(subparsers)
     add_fit_loss_functions_subparser(subparsers)
     add_forecast_smap_subparser(subparsers)
+    add_write_forecast_geotiff_subparser(subparsers)
     args = parser.parse_args()
     if hasattr(args, 'func'):
         return args.func(args)
@@ -271,3 +272,64 @@ def forecast_smap_cli(args):
         smap_db_path=args.smap_data_db,
         forecast_db_path=args.forecast_db,
     )
+
+
+def add_write_forecast_geotiff_subparser(subparsers):
+    """Add subparser for forecast-smap"""
+    parser = subparsers.add_parser(
+        'write-forecast-geotiffs',
+        description='Export SMAP forecasts from SQLite to daily GeoTIFFs. '
+        'GeoTIFFs will be generated for 5 consecutive days up to '
+        'the last datetime in the input database.',
+    )
+    parser.add_argument(
+        'input_smap_db',
+        metavar='SMAPDB',
+        type=pathlib.Path,
+        help='Path to SQLite database of SMAP forecasts',
+    )
+    parser.add_argument(
+        'col_file',
+        type=pathlib.Path,
+        metavar='COLTIF',
+        help='Path to GeoTIFF EASE grid column indices',
+    )
+    parser.add_argument(
+        'row_file',
+        type=pathlib.Path,
+        metavar='ROWTIF',
+        help='Path to GeoTIFF EASE grid row indices',
+    )
+    parser.add_argument(
+        '-o',
+        '--outfile-pattern',
+        metavar='PATTERN',
+        help=(
+            'File path template for output GeoTIFFs as an f-string-style '
+            'template with one field for the datetime'
+        ),
+        default='SMAP_forecast_{}.tif',
+    )
+    parser.set_defaults(func=write_forecast_geotiff_cli)
+
+
+def write_forecast_geotiff_cli(args):
+    """CLI to write forecast GeoTIFFs"""
+    import sqlite3
+
+    from .write_forecast_geotiffs import get_grid_data, write_forecast_geotiffs
+
+    geotransform, projection_wkt, col_data, row_data = get_grid_data(
+        col_file_path=args.col_file, row_file_path=args.row_file
+    )
+
+    with sqlite3.connect(f'file:{args.input_smap_db}?mode=ro', uri=True) as connection:
+        write_forecast_geotiffs(
+            cursor=connection.cursor(),
+            geotransform=geotransform,
+            projection_wkt=projection_wkt,
+            col_data=col_data,
+            row_data=row_data,
+            outfile_pattern=args.outfile_pattern,
+        )
+    return 0
