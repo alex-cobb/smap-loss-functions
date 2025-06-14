@@ -21,6 +21,8 @@ dependencies = [
     "numpy",
     "ogr",
     "pyproj",
+    "pytest",
+    "pytest-mpl",
     "scipy",
 ]
 

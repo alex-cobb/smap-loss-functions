@@ -27,7 +27,9 @@ def main():
     add_write_smap_db_subparser(subparsers)
     add_fit_loss_functions_subparser(subparsers)
     add_forecast_smap_subparser(subparsers)
-    add_write_forecast_geotiff_subparser(subparsers)
+    add_write_forecast_geotiffs_subparser(subparsers)
+    add_write_colormap_subparser(subparsers)
+    add_plot_loss_function_subparser(subparsers)
     args = parser.parse_args()
     if hasattr(args, 'func'):
         return args.func(args)
@@ -274,8 +276,8 @@ def forecast_smap_cli(args):
     )
 
 
-def add_write_forecast_geotiff_subparser(subparsers):
-    """Add subparser for forecast-smap"""
+def add_write_forecast_geotiffs_subparser(subparsers):
+    """Add subparser for write-forecast-geotiffs"""
     parser = subparsers.add_parser(
         'write-forecast-geotiffs',
         description='Export SMAP forecasts from SQLite to daily GeoTIFFs. '
@@ -310,10 +312,10 @@ def add_write_forecast_geotiff_subparser(subparsers):
         ),
         default='SMAP_forecast_{}.tif',
     )
-    parser.set_defaults(func=write_forecast_geotiff_cli)
+    parser.set_defaults(func=write_forecast_geotiffs_cli)
 
 
-def write_forecast_geotiff_cli(args):
+def write_forecast_geotiffs_cli(args):
     """CLI to write forecast GeoTIFFs"""
     import sqlite3
 
@@ -332,4 +334,103 @@ def write_forecast_geotiff_cli(args):
             row_data=row_data,
             outfile_pattern=args.outfile_pattern,
         )
+    return 0
+
+
+def add_write_colormap_subparser(subparsers):
+    """Add subparser for write-colormap"""
+    parser = subparsers.add_parser(
+        'write-colormap', help='Write a matplotlib colormap to a text file for GDAL'
+    )
+    parser.add_argument(
+        'colormap_name', help='Matplotlib colormap name', metavar='NAME'
+    )
+    parser.add_argument(
+        'min_value', metavar='MIN', help='Minimum data value', type=float
+    )
+    parser.add_argument(
+        'max_value', metavar='MAX', help='Maximum data value', type=float
+    )
+    parser.add_argument(
+        '-o',
+        '--outfile',
+        type=argparse.FileType('wt', encoding='ascii'),
+        default=sys.stdout,
+    )
+    parser.set_defaults(func=write_colormap_cli)
+
+
+def write_colormap_cli(args):
+    """CLI for write-colormap"""
+    from .write_colormap import write_colormap
+
+    with args.outfile as outfile:
+        return write_colormap(
+            colormap_name=args.colormap_name,
+            min_value=args.min_value,
+            max_value=args.max_value,
+            outfile=outfile,
+        )
+
+
+def add_plot_loss_function_subparser(subparsers):
+    """Add subparser for plot-loss-function"""
+    parser = subparsers.add_parser(
+        'plot-loss-function', help='Plot loss functions sensu Koster et al (2017)'
+    )
+    parser.add_argument(
+        'loss_function_db',
+        metavar='LOSSDB',
+        help='Path to loss function db',
+    )
+    parser.add_argument('col', type=int, help='EASE grid column')
+    parser.add_argument('row', type=int, help='EASE grid row')
+    parser.add_argument(
+        '--against-smap-db',
+        metavar='SMAPDB',
+        help='Simulate against data in SMAP and IMERG db',
+    )
+    parser.set_defaults(func=plot_loss_function_cli)
+
+
+def plot_loss_function_cli(args):
+    """CLI to plot a loss function"""
+    from .plot_loss_function import (
+        get_loss_function_from_db,
+        plot_loss_function,
+        plot_loss_function_simulation,
+    )
+
+    from matplotlib import pyplot as plt
+
+    import sqlite3
+
+    with sqlite3.connect(
+        f'file:{args.loss_function_db}?mode=ro', uri=True
+    ) as loss_function_connection:
+        try:
+            loss_function = get_loss_function_from_db(
+                connection=loss_function_connection,
+                ease_col=args.col,
+                ease_row=args.row,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            sys.exit(1)
+    if args.against_smap_db is not None:
+        with sqlite3.connect(args.against_smap_db) as smap_connection:
+            fig = plot_loss_function_simulation(
+                loss_function=loss_function,
+                smap_connection=smap_connection,
+                ease_col=args.col,
+                ease_row=args.row,
+            )
+    else:
+        fig = plot_loss_function(
+            loss_function=loss_function,
+            ease_col=args.col,
+            ease_row=args.row,
+        )
+    plt.show()
+    del fig
     return 0
