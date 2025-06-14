@@ -12,8 +12,11 @@ from osgeo import gdal, osr
 from smap_loss_functions import write_forecast_geotiffs
 
 
+# For fixtures:  pylint: disable=redefined-outer-name
+
+
 @pytest.fixture
-def in_memory_db():
+def in_memory_smap_db():
     """Fixture for an in-memory SQLite database"""
     conn = sqlite3.connect(':memory:')
     cursor = conn.cursor()
@@ -202,11 +205,10 @@ def test_write_geotiff(tmp_path):
     del ds
 
 
-def test_write_forecast_geotiffs_success(in_memory_db, tmp_path, temp_grid_tiffs):
-    cursor = in_memory_db
-    col_file_path, row_file_path, geotransform, projection_wkt, col_data, row_data = (
-        temp_grid_tiffs
-    )
+def test_write_forecast_geotiffs_success(in_memory_smap_db, tmp_path, temp_grid_tiffs):
+    """Test successful call"""
+    cursor = in_memory_smap_db
+    _, _, geotransform, projection_wkt, col_data, row_data = temp_grid_tiffs
 
     # Populate the in-memory database with dummy data
     # 5 days are required
@@ -239,12 +241,9 @@ def test_write_forecast_geotiffs_success(in_memory_db, tmp_path, temp_grid_tiffs
     )
 
     # Verify that 5 GeoTIFF files were created
-    expected_files = []
     for i in range(5):
         dt = today - datetime.timedelta(days=i)
-        expected_files.append(tmp_path / f'forecast_{dt.strftime("%Y%m%dT%H%M")}.tif')
-
-    for f in expected_files:
+        f = tmp_path / f'forecast_{dt.strftime("%Y%m%dT%H%M")}.tif'
         assert f.exists(), f'File {f} was not created'
         # Basic check on content
         ds = gdal.Open(str(f))
@@ -255,13 +254,11 @@ def test_write_forecast_geotiffs_success(in_memory_db, tmp_path, temp_grid_tiffs
 
 
 def test_write_forecast_geotiffs_no_data_in_db_raises_error(
-    in_memory_db, tmp_path, temp_grid_tiffs
+    in_memory_smap_db, tmp_path, temp_grid_tiffs
 ):
     """ValueError is raised if there is no data in the db"""
-    cursor = in_memory_db
-    col_file_path, row_file_path, geotransform, projection_wkt, col_data, row_data = (
-        temp_grid_tiffs
-    )
+    cursor = in_memory_smap_db
+    _, _, geotransform, projection_wkt, col_data, row_data = temp_grid_tiffs
     outfile_pattern = str(tmp_path / 'forecast_{}.tif')
 
     with pytest.raises(ValueError, match='No data in smap_data'):
@@ -271,13 +268,12 @@ def test_write_forecast_geotiffs_no_data_in_db_raises_error(
 
 
 def test_write_forecast_geotiffs_missing_expected_daily_data(
-    in_memory_db, tmp_path, temp_grid_tiffs, caplog
+    in_memory_smap_db, tmp_path, temp_grid_tiffs, caplog
 ):
     """Expect data in database are available on a daily grid for 5 days"""
-    cursor = in_memory_db
-    col_file_path, row_file_path, geotransform, projection_wkt, col_data, row_data = (
-        temp_grid_tiffs
-    )
+    del caplog  # Required fixture
+    cursor = in_memory_smap_db
+    _, _, geotransform, projection_wkt, col_data, row_data = temp_grid_tiffs
 
     # Populate with only one day of data
     latest_dt = datetime.datetime(2023, 6, 14, 12, 0, 0)

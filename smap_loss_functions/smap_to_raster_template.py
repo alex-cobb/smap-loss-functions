@@ -6,8 +6,6 @@ import numpy as np
 
 from osgeo import gdal, osr
 
-from .choose_ease_grid import transform_lonlat_to_ease2
-
 
 osr.UseExceptions()
 
@@ -17,12 +15,7 @@ EASE_GRID_EPSG = 6933
 
 def smap_to_raster_template(h5_dataset, colfile_path, rowfile_path, outfile_path):
     """Export soil moisture from a SMAP file to a raster template"""
-    col_geotransform, col_data = read_index_raster(colfile_path)
-    row_geotransform, row_data = read_index_raster(rowfile_path)
-    assert row_geotransform == col_geotransform
-    assert col_data.shape == row_data.shape
-    geotransform = col_geotransform
-    del row_geotransform, col_geotransform
+    geotransform, col_data, row_data = get_colrow_data(colfile_path, rowfile_path)
 
     short_name = h5_dataset['Metadata/DatasetIdentification'].attrs['SMAPShortName']
     sm_group = h5_dataset[
@@ -106,7 +99,7 @@ def get_masked_variable(h5_group):
     """Retrieve a variable as a masked array"""
     nodata_value = h5_group.attrs['_FillValue']
     data = h5_group[:]
-    return np.ma.masked_array(data, mask=(data == nodata_value))
+    return np.ma.masked_array(data, mask=data == nodata_value)
 
 
 def read_index_raster(path):
@@ -167,3 +160,14 @@ def write_geotiff(
     metadata['units'] = 'm3/m3'
     dataset.SetMetadata(metadata)
     return 0
+
+
+def get_colrow_data(colfile_path, rowfile_path):
+    """Get EASE grid column and row data from rasters"""
+    col_geotransform, col_data = read_index_raster(colfile_path)
+    row_geotransform, row_data = read_index_raster(rowfile_path)
+    assert row_geotransform == col_geotransform
+    assert col_data.shape == row_data.shape
+    geotransform = col_geotransform
+    del row_geotransform, col_geotransform
+    return (geotransform, col_data, row_data)

@@ -1,11 +1,11 @@
 """Tests for choose_ease_grid"""
 
-import json
-import pytest
 from unittest import mock
-import numpy as np  # Import numpy for creating mock arrays
 
-# Assuming the provided script is saved as smap_loss_functions/choose_ease_grid.py
+import numpy as np
+
+import pytest
+
 from smap_loss_functions.choose_ease_grid import (
     choose_ease_grid,
     write_ease_column_raster,
@@ -18,6 +18,9 @@ from smap_loss_functions.choose_ease_grid import (
     transform_lonlat_to_ease2,
     EASE_GRID_EPSG,
 )
+
+
+# For fixtures:  pylint: disable=redefined-outer-name
 
 
 @pytest.fixture
@@ -215,8 +218,6 @@ def test_write_geotiff(tmp_path, sample_gridspec):
         mock_dataset.GetRasterBand.assert_called_once_with(
             1
         )  # Ensure this is called before SetNoDataValue/WriteArray
-        # Use mock.ANY for float('nan') comparison as float('nan') == float('nan') is False
-        mock_band.SetNoDataValue.assert_called_once_with(mock.ANY)
         mock_band.WriteArray.assert_called_once_with(data)
 
 
@@ -230,7 +231,7 @@ def test_write_ease_column_raster(tmp_path, sample_gridspec):
     ) as mock_write_geotiff:
         write_ease_column_raster(sample_gridspec, start_col, thru_col, outfile_path)
         mock_write_geotiff.assert_called_once()
-        args, kwargs = mock_write_geotiff.call_args
+        args, _ = mock_write_geotiff.call_args
         assert args[0] == sample_gridspec
         # Check that the data array has correct shape and values
         data_arg = args[1]
@@ -250,7 +251,7 @@ def test_write_ease_row_raster(tmp_path, sample_gridspec):
     ) as mock_write_geotiff:
         write_ease_row_raster(sample_gridspec, start_row, thru_row, outfile_path)
         mock_write_geotiff.assert_called_once()
-        args, kwargs = mock_write_geotiff.call_args
+        args, _ = mock_write_geotiff.call_args
         assert args[0] == sample_gridspec
         # Check that the data array has correct shape and values
         data_arg = args[1]

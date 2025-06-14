@@ -58,8 +58,10 @@ def write_forecast_geotiffs(
             try:
                 soil_moisture_array[ease_index_lut[(col, row)]] = soil_moisture
             except KeyError:
-                LOG.warn(
-                    f'EASE grid ({col}, {row}) in DB but not in template files, skipping'
+                LOG.warning(
+                    'EASE grid (%s, %s) in DB but not in template files, skipping',
+                    col,
+                    row,
                 )
 
         # Define output file path
@@ -68,7 +70,7 @@ def write_forecast_geotiffs(
         # Write the GeoTIFF, passing the projection WKT from the col_file
         write_geotiff(
             soil_moisture=soil_moisture_array,
-            datetime=dt,
+            datetime_obj=dt,
             geotransform=geotransform,
             outfile_path=output_filename,
             projection_wkt=projection_wkt,  # Pass the projection WKT
@@ -118,7 +120,9 @@ def read_index_raster(path):
     return (geotransform, band_data, projection_wkt)
 
 
-def write_geotiff(soil_moisture, datetime, geotransform, outfile_path, projection_wkt):
+def write_geotiff(
+    soil_moisture, datetime_obj, geotransform, outfile_path, projection_wkt
+):
     """Write soil moisture to GeoTIFF file"""
     driver = gdal.GetDriverByName('GTiff')
 
@@ -144,13 +148,15 @@ def write_geotiff(soil_moisture, datetime, geotransform, outfile_path, projectio
     # Write datetime into metadata in same format as rasters created directly
     # from SMAP data
     metadata = dataset.GetMetadata() or {}
-    metadata['TB_MEAN_DATETIME'] = datetime.isoformat(sep=' ', timespec='milliseconds')
+    metadata['TB_MEAN_DATETIME'] = datetime_obj.isoformat(
+        sep=' ', timespec='milliseconds'
+    )
     metadata['TIME_BNDS_0'], metadata['TIME_BNDS_1'] = [
-        datetime.isoformat(sep=' ', timespec='milliseconds')
+        datetime_obj.isoformat(sep=' ', timespec='milliseconds')
         for key in ('start', 'thru')
     ]
     # DateTime is a standard TIFF tag and is meant to be written as "YYYY:MM:DD HH:MM:SS"
-    metadata['DateTime'] = datetime.replace(tzinfo=None).isoformat(
+    metadata['DateTime'] = datetime_obj.replace(tzinfo=None).isoformat(
         sep=' ', timespec='seconds'
     )
     metadata['ImageDescription'] = (

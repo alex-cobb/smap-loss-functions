@@ -22,7 +22,7 @@ gdal.UseExceptions()
 def imerg_to_geotiff(nc_dataset, outfile_name):
     """Convert IMERG GPM data to GeoTIFF format"""
     time_bnds_var = nc_dataset['time_bnds']
-    time_bnds = netCDF4.num2date(
+    time_bnds = netCDF4.num2date(  # pylint: disable=no-member
         time_bnds_var[:],
         units=time_bnds_var.units,
         calendar='standard',

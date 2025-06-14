@@ -43,20 +43,13 @@ def test_write_colormap_basic_functionality():
 
         assert float(line_parts[0]) == pytest.approx(expected_values[i])
 
-        r, g, b, a = [int(p) for p in line_parts[1:]]
-        assert 0 <= r <= 255, 'Expected integer 0-255'
-        assert 0 <= g <= 255, 'Expected integer 0-255'
-        assert 0 <= b <= 255, 'Expected integer 0-255'
-        assert 0 <= a <= 255, 'Expected integer 0-255'
+        rgba = [int(p) for p in line_parts[1:]]
+        for value in rgba:
+            assert 0 <= value <= 255, 'Expected integer 0-255'
 
         expected_rgba_float = cmap(i / (n_colors - 1))
-        expected_r, expected_g, expected_b, expected_a = [
-            int(round(v * 255)) for v in expected_rgba_float
-        ]
-        assert r == expected_r
-        assert g == expected_g
-        assert b == expected_b
-        assert a == expected_a
+        expected_rgba = [int(round(v * 255)) for v in expected_rgba_float]
+        assert rgba == expected_rgba
 
 
 def test_write_colormap_edge_cases_n_colors():

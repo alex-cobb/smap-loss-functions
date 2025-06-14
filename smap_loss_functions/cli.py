@@ -16,6 +16,9 @@ logging.basicConfig(
 LOG = logging.getLogger('smap_loss_functions.cli')
 
 
+# pylint: disable=import-outside-toplevel
+
+
 def main():
     """Main CLI for smap-loss-functions"""
     parser = argparse.ArgumentParser(description='SMAP Loss Functions CLI')
@@ -169,7 +172,7 @@ def imerg_to_geotiff_cli(args):
     import netCDF4
     from .imerg_to_geotiff import imerg_to_geotiff
 
-    with netCDF4.Dataset(args.infile) as nc_dataset:
+    with netCDF4.Dataset(args.infile) as nc_dataset:  # pylint: disable=no-member
         return imerg_to_geotiff(nc_dataset=nc_dataset, outfile_name=args.outfile)
 
 
@@ -225,7 +228,8 @@ def add_fit_loss_functions_subparser(subparsers):
 def fit_loss_functions_cli(args):
     """CLI for fit-loss-functions"""
     import sqlite3
-    from .fit_loss_functions import set_up_loss_function_db, fit_loss_functions
+    from .loss_function_db import set_up_loss_function_db
+    from .fit_loss_functions import fit_loss_functions
 
     if args.out_db.exists():
         args.out_db.unlink()
@@ -395,8 +399,8 @@ def add_plot_loss_function_subparser(subparsers):
 
 def plot_loss_function_cli(args):
     """CLI to plot a loss function"""
+    from .loss_function_db import get_loss_function_from_db
     from .plot_loss_function import (
-        get_loss_function_from_db,
         plot_loss_function,
         plot_loss_function_simulation,
     )
@@ -428,8 +432,6 @@ def plot_loss_function_cli(args):
     else:
         fig = plot_loss_function(
             loss_function=loss_function,
-            ease_col=args.col,
-            ease_row=args.row,
         )
     plt.show()
     del fig

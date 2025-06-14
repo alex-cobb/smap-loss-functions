@@ -1,10 +1,14 @@
 """Tests for write-smap-db"""
 
-import pytest
-import sqlite3
 import io
+import sqlite3
+
+import pytest
 
 from smap_loss_functions.write_smap_db import write_smap_db
+
+
+# For fixtures:  pylint: disable=redefined-outer-name
 
 
 @pytest.fixture

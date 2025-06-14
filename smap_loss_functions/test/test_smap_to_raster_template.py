@@ -1,9 +1,11 @@
 """Test smap_to_raster_template"""
 
 import datetime
-import numpy as np
-import pytest
 from unittest.mock import MagicMock, patch, DEFAULT
+
+import numpy as np
+
+import pytest
 
 from smap_loss_functions import smap_to_raster_template
 
@@ -194,7 +196,6 @@ def test_timestamp_from_utc_isoformat_valid():
 def test_timestamp_from_utc_isoformat_invalid_format():
     """Test with an invalid ISO format string."""
     dt_str = 'invalid-datetime-string'
-    # No patching of datetime.datetime needed here, using real datetime
 
     result = smap_to_raster_template.timestamp_from_utc_isoformat(dt_str)
     assert np.isnan(result)
@@ -203,7 +204,6 @@ def test_timestamp_from_utc_isoformat_invalid_format():
 def test_timestamp_from_utc_isoformat_non_utc():
     """Test with a non-UTC datetime string (should raise ValueError)."""
     dt_str = '2023-01-01T12:30:00.000+01:00'  # Not UTC
-    # No patching of datetime.datetime needed here, using real datetime
 
     with pytest.raises(ValueError, match='does not specify that it is UTC'):
         smap_to_raster_template.timestamp_from_utc_isoformat(dt_str)
@@ -211,7 +211,6 @@ def test_timestamp_from_utc_isoformat_non_utc():
 
 def test_compute_datetimes_valid_data():
     """Test compute_datetimes with valid datetime strings."""
-    # We will use actual timestamps in the assertions, as the function calls real datetime now.
     expected_timestamps = np.array(
         [
             datetime.datetime.fromisoformat(b'2023-01-01T12:00:00.000Z'.decode('ascii'))
@@ -226,7 +225,6 @@ def test_compute_datetimes_valid_data():
         ]
     )
 
-    # No patch for timestamp_from_utc_isoformat or np.array needed here, as the function calls real datetime
     datetimes_bytes = [
         b'2023-01-01T12:00:00.000Z',
         b'2023-01-01T12:01:00.000Z',
@@ -258,7 +256,6 @@ def test_compute_datetimes_valid_data():
 
 def test_compute_datetimes_no_valid_data():
     """Test compute_datetimes when no valid datetime strings are found."""
-    # No patch for timestamp_from_utc_isoformat needed here, using real datetime.
     datetimes_bytes = [b'invalid', b'another-invalid']
     result = smap_to_raster_template.compute_datetimes(datetimes_bytes)
 

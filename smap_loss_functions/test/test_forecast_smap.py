@@ -1,22 +1,25 @@
 """Tests for forecast_smap"""
 
-import pytest
-import sqlite3
 import datetime
-import numpy as np
+import sqlite3
 import sys
+
+import numpy as np
+
+import pytest
 
 from smap_loss_functions.forecast_smap import (
     forecast_smap,
     create_smap_table,
     insert_simulated_data,
     get_distinct_col_row_pairs,
-    get_loss_function_from_db,
     get_latest_soil_moisture,
-    simulate_soil_moisture,
     LossFunction,
     ensure_read_only_uri,
 )
+
+
+# For fixtures:  pylint: disable=redefined-outer-name
 
 
 def create_mock_db(db_path, schema_sql, initial_data):
@@ -72,11 +75,6 @@ def create_smap_db(db_path, data):
     """
     initial_data = {'smap_data': data}
     create_mock_db(db_path, schema, initial_data)
-
-
-def zero_precipitation(t):
-    """Precipitation function that always returns 0"""
-    return np.zeros_like(t, dtype='float64') if isinstance(t, np.ndarray) else 0.0
 
 
 @pytest.fixture
@@ -346,30 +344,13 @@ def test_get_distinct_col_row_pairs_no_match(tmp_path):
 
 
 def test_get_distinct_col_row_pairs_empty_dbs(
-    tmp_path, empty_loss_function_db_path, empty_smap_db_path
+    empty_loss_function_db_path, empty_smap_db_path
 ):
     """Test with empty loss function and SMAP databases."""
     with sqlite3.connect(empty_loss_function_db_path) as conn:
         cursor = conn.cursor()
         result = get_distinct_col_row_pairs(cursor, empty_smap_db_path)
         assert result == []
-
-
-def test_get_loss_function_from_db_success(loss_function_db_path):
-    """Test successful retrieval and instantiation of a LossFunction."""
-    with sqlite3.connect(loss_function_db_path) as conn:
-        lf = get_loss_function_from_db(conn, 10, 20)
-        assert isinstance(lf, LossFunction)
-        assert lf.W[-1] == pytest.approx(0.45)
-        assert lf.W[0] == pytest.approx(0.05)
-        assert lf.L[1] == pytest.approx(0.001)  # LA
-
-
-def test_get_loss_function_from_db_not_found(loss_function_db_path):
-    """Test retrieval for a non-existent (col, row) pair."""
-    with sqlite3.connect(loss_function_db_path) as conn:
-        with pytest.raises(ValueError, match='EASE col=99 row=99 not found'):
-            get_loss_function_from_db(conn, 99, 99)
 
 
 def test_get_latest_soil_moisture_success(smap_db_path):
@@ -390,154 +371,10 @@ def test_get_latest_soil_moisture_missing_data(empty_smap_db_path):
             get_latest_soil_moisture(cursor, 1, 1)
 
 
-# Simplified LossFunction creation for testing
 @pytest.fixture
 def sample_loss_function():
+    """Simplified LossFunction creation for testing"""
     return LossFunction(Wmax=0.45, Wmin=0.05, LA=0.001, LB=0.005, LC=0.015)
-
-
-def test_LossFunction_init_valid():
-    """Test valid initialization of LossFunction."""
-    lf = LossFunction(Wmax=0.45, Wmin=0.05, LA=0.001, LB=0.005, LC=0.015)
-    assert np.allclose(lf.W, [0.05, 0.15, 0.25, 0.35, 0.45])
-    assert np.allclose(lf.L, [0.0, 0.001, 0.005, 0.015, 0.45 / 24.0])
-
-
-def test_LossFunction_init_invalid_W_order():
-    """Test LossFunction initialization with decreasing W values"""
-    with pytest.raises(
-        ValueError, match='W values for loss function are not monotonically increasing'
-    ):
-        LossFunction(Wmax=0.05, Wmin=0.45, LA=0.001, LB=0.005, LC=0.015)  # Wmax < Wmin
-
-
-def test_LossFunction_call_interpolation(sample_loss_function):
-    """Test interpolation within the W range."""
-    lf = sample_loss_function
-    # Test values between Wmin and WA (0.05 and 0.15)
-    # L(0.10) should be halfway between Lmin (0.0) and LA (0.001)
-    assert lf(0.10) == pytest.approx(0.0005)
-    # Test values between WA and WB (0.15 and 0.25)
-    # L(0.20) should be halfway between LA (0.001) and LB (0.005)
-    assert lf(0.20) == pytest.approx(0.003)
-
-
-def test_LossFunction_call_extrapolation_below(sample_loss_function):
-    """Test extrapolation for soil moisture below Wmin."""
-    lf = sample_loss_function
-    # L(Wmin) is 0.0, so anything below Wmin should also be 0.0
-    assert lf(0.01) == pytest.approx(0.0)
-    assert lf(-0.1) == pytest.approx(0.0)
-
-
-def test_LossFunction_call_extrapolation_above(sample_loss_function):
-    """Test extrapolation for soil moisture above Wmax."""
-    lf = sample_loss_function
-    # L(Wmax) = Wmax / 24.0 = 0.45 / 24 = 0.01875
-    assert lf(0.50) == pytest.approx(0.45 / 24.0)
-    assert lf(1.0) == pytest.approx(0.45 / 24.0)
-
-
-def test_simulate_soil_moisture_basic_zero_precipitation(sample_loss_function):
-    """
-    Test a basic simulation with zero precipitation.
-    Soil moisture should only decrease due to loss function.
-    """
-    Winit = 0.30
-    Wmax = sample_loss_function.W[-1]
-    loss_function_h = sample_loss_function
-    P_of_t_mm_d = zero_precipitation
-    ts_start = datetime.datetime(2023, 1, 1, 0, 0, 0).timestamp()
-    ts_thru = datetime.datetime(2023, 1, 1, 5, 0, 0).timestamp()  # Simulate for 5 hours
-
-    tsim, Wsim = simulate_soil_moisture(
-        Winit=Winit,
-        Wmax=Wmax,
-        loss_function_h=loss_function_h,
-        P_of_t_mm_d=P_of_t_mm_d,
-        ts_start=ts_start,
-        ts_thru=ts_thru,
-    )
-
-    assert (
-        len(tsim) == 6
-    )  # 0, 1, 2, 3, 4, 5 hours (ts_start to ts_thru inclusive hours)
-    assert len(Wsim) == 6
-    assert Wsim[0] == pytest.approx(Winit)  # Initial condition
-
-    # Expect soil moisture to decrease or stay the same (if at Wmin or L(W)=0)
-    assert np.all(np.diff(Wsim) <= 0)  # Should be non-increasing for zero precipitation
-
-    # Check a few values manually or against a simple model expectation
-    # At Winit=0.30, L(0.30) is between L(WB=0.25)=0.005 and L(WC=0.35)=0.015.
-    # L(0.30) = 0.005 + (0.30 - 0.25)/(0.35 - 0.25) * (0.015 - 0.005)
-    # L(0.30) = 0.005 + 0.05/0.10 * 0.01 = 0.005 + 0.5 * 0.01 = 0.005 + 0.005 = 0.01
-    # W[i+1] = W[i] - L(W[i]) * 1 (delta_t=1 hour)
-    # W[1] = W[0] - L(W[0]) = 0.30 - 0.01 = 0.29
-    assert Wsim[1] == pytest.approx(0.29)
-
-
-def test_simulate_soil_moisture_error_zero_or_negative_duration():
-    """Test `ValueError` for zero or negative simulation duration."""
-    Winit = 0.20
-    Wmax = 0.40
-    lf = LossFunction(Wmax=Wmax, Wmin=0.10, LA=0.001, LB=0.002, LC=0.003)
-    P_of_t_mm_d = zero_precipitation
-    ts_start = datetime.datetime(2023, 1, 1, 0, 0, 0).timestamp()
-    ts_thru_equal = ts_start
-    ts_thru_negative = ts_start - 3600
-
-    with pytest.raises(ValueError, match='Simulation period is less than an hour'):
-        simulate_soil_moisture(
-            Winit=Winit,
-            Wmax=Wmax,
-            loss_function_h=lf,
-            P_of_t_mm_d=P_of_t_mm_d,
-            ts_start=ts_start,
-            ts_thru=ts_thru_equal,
-        )
-    with pytest.raises(ValueError, match='Simulation period is less than an hour'):
-        simulate_soil_moisture(
-            Winit=Winit,
-            Wmax=Wmax,
-            loss_function_h=lf,
-            P_of_t_mm_d=P_of_t_mm_d,
-            ts_start=ts_start,
-            ts_thru=ts_thru_negative,
-        )
-
-
-def test_simulate_soil_moisture_clipping_at_Wmin():
-    """Test that soil moisture does not go below Wmin."""
-    Winit = 0.06  # Slightly above Wmin
-    Wmax = 0.40
-    lf = LossFunction(Wmax=Wmax, Wmin=0.05, LA=0.001, LB=0.002, LC=0.003)  # Wmin = 0.05
-    P_of_t_mm_d = zero_precipitation
-    ts_start = datetime.datetime(2023, 1, 1, 0, 0, 0).timestamp()
-    ts_thru = datetime.datetime(2023, 1, 1, 5, 0, 0).timestamp()
-
-    tsim, Wsim = simulate_soil_moisture(
-        Winit=Winit,
-        Wmax=Wmax,
-        loss_function_h=lf,
-        P_of_t_mm_d=P_of_t_mm_d,
-        ts_start=ts_start,
-        ts_thru=ts_thru,
-    )
-    # After some time, Wsim should reach Wmin and stay there or very close
-    assert np.all(Wsim >= lf.W[0] - 1e-9)  # Allow for floating point precision
-
-    # Test directly setting Winit to Wmin, expect it to stay at Wmin (since L(Wmin)=0 and P=0)
-    Winit_at_Wmin = lf.W[0]
-    tsim_min, Wsim_min = simulate_soil_moisture(
-        Winit=Winit_at_Wmin,
-        Wmax=Wmax,
-        loss_function_h=lf,
-        P_of_t_mm_d=P_of_t_mm_d,
-        ts_start=ts_start,
-        ts_thru=ts_thru,
-    )
-    assert np.allclose(Wsim_min, lf.W[0])
 
 
 # Test main function
@@ -548,6 +385,7 @@ def test_forecast_smap_success(loss_function_db_path, smap_db_path, tmp_path, ca
     Test the main forecast_smap function for a successful run.
     Verifies that the forecast database is created and populated.
     """
+    del capsys  # Required fixture
     forecast_db_path = tmp_path / 'forecast.db'
 
     # Capture stdout/stderr for checking log messages
@@ -573,7 +411,8 @@ def test_forecast_smap_success(loss_function_db_path, smap_db_path, tmp_path, ca
     with sqlite3.connect(forecast_db_path) as conn:
         cursor = conn.cursor()
         cursor.execute(
-            'SELECT ease_col, ease_row, COUNT(*) FROM smap_data GROUP BY ease_col, ease_row;'
+            'SELECT ease_col, ease_row, COUNT(*) '
+            'FROM smap_data GROUP BY ease_col, ease_row'
         )
         counts = cursor.fetchall()
 

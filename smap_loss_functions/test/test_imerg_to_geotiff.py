@@ -1,15 +1,20 @@
 """Tests for imerg-to-geotiff"""
 
-import pytest
-import numpy as np
-import netCDF4
 import datetime
-from osgeo import gdal, osr
-
 import os
 
+import netCDF4
+
+import numpy as np
+
+from osgeo import gdal, osr
+
+import pytest
 
 from smap_loss_functions.imerg_to_geotiff import imerg_to_geotiff
+
+
+# For fixtures:  pylint: disable=redefined-outer-name
 
 
 class MockNetCDF4Variable:
@@ -47,12 +52,12 @@ class MockNetCDF4Dataset:
         # Default time_bnds data
         time_bnds_data = np.array(
             [
-                netCDF4.date2num(
+                netCDF4.date2num(  # pylint: disable=no-member
                     time_start_dt,
                     units='seconds since 1970-01-01 00:00:00',
                     calendar='standard',
                 ),
-                netCDF4.date2num(
+                netCDF4.date2num(  # pylint: disable=no-member
                     time_end_dt,
                     units='seconds since 1970-01-01 00:00:00',
                     calendar='standard',
@@ -118,7 +123,6 @@ class MockNetCDF4Dataset:
 
     def close(self):
         """No-op for the mock dataset."""
-        pass
 
 
 @pytest.fixture
@@ -223,6 +227,7 @@ def test_imerg_to_geotiff_assert_failures():
     dataset_wrong_dims = MockNetCDF4Dataset(
         precip_data=np.random.rand(1, 1800, 3600)  # (time, lat, lon)
     )
+    # pylint: disable=protected-access
     dataset_wrong_dims._variables['precipitation'].dimensions = (
         'time',
         'lat',

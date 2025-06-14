@@ -18,6 +18,9 @@ from smap_loss_functions.dump_ease_raster_data import (
 gdal.UseExceptions()
 
 
+# For fixtures:  pylint: disable=redefined-outer-name
+
+
 # Helper function to create a dummy GeoTIFF file
 def create_dummy_geotiff(
     filepath, data, geotransform, nodata_value=None, metadata=None
@@ -65,7 +68,7 @@ def dummy_col_row_files(temp_dir):
     create_dummy_geotiff(col_filepath, col_data, geotransform)
     create_dummy_geotiff(row_filepath, row_data, geotransform)
 
-    return col_filepath, row_filepath, geotransform, col_data.shape
+    return col_filepath, row_filepath, geotransform
 
 
 # Test cases for read_raster_data
@@ -122,8 +125,7 @@ def test_read_raster_data_with_nodata_masked_invalid(temp_dir):
 # Test cases for dump_ease_raster_data
 def test_dump_ease_raster_data_basic(dummy_col_row_files, temp_dir):
     """Test dump_ease_raster_data with basic valid inputs."""
-    col_filepath, row_filepath, geotransform, shape = dummy_col_row_files
-    rows, cols = shape
+    col_filepath, row_filepath, geotransform = dummy_col_row_files
 
     # Create dummy data input files
     infile_list = []
@@ -170,8 +172,7 @@ def test_dump_ease_raster_data_basic(dummy_col_row_files, temp_dir):
 
 def test_dump_ease_raster_data_with_nodata_in_input_file(dummy_col_row_files, temp_dir):
     """Test dump_ease_raster_data when an input file has NoDataValue."""
-    col_filepath, row_filepath, geotransform, shape = dummy_col_row_files
-    rows, cols = shape
+    col_filepath, row_filepath, geotransform = dummy_col_row_files
 
     infile_list = []
     expected_output = 'start_datetime,thru_datetime,column,row,value\n'
@@ -207,9 +208,9 @@ def test_dump_ease_raster_data_with_nodata_in_input_file(dummy_col_row_files, te
     assert output_buffer.getvalue() == expected_output
 
 
-def test_dump_ease_raster_data_empty_infile_list(dummy_col_row_files, temp_dir):
+def test_dump_ease_raster_data_empty_infile_list(dummy_col_row_files):
     """Test dump_ease_raster_data with an empty list of input files."""
-    col_filepath, row_filepath, geotransform, shape = dummy_col_row_files
+    col_filepath, row_filepath, _ = dummy_col_row_files
     infile_list = []
     expected_output = 'start_datetime,thru_datetime,column,row,value\n'
 
@@ -224,7 +225,7 @@ def test_dump_ease_raster_data_empty_infile_list(dummy_col_row_files, temp_dir):
 
 def test_dump_ease_raster_data_mismatched_geotransform(dummy_col_row_files, temp_dir):
     """Test dump_ease_raster_data with mismatched geotransform."""
-    col_filepath, row_filepath, _, shape = dummy_col_row_files
+    col_filepath, row_filepath, _ = dummy_col_row_files
 
     # Create a data file with a different geotransform
     mismatched_geotransform = (100.0, 1.0, 0.0, 100.0, 0.0, -1.0)
@@ -248,7 +249,7 @@ def test_dump_ease_raster_data_mismatched_geotransform(dummy_col_row_files, temp
 
 def test_dump_ease_raster_data_mismatched_shape(dummy_col_row_files, temp_dir):
     """Test dump_ease_raster_data with mismatched shape in input file."""
-    col_filepath, row_filepath, geotransform, _ = dummy_col_row_files
+    col_filepath, row_filepath, geotransform = dummy_col_row_files
 
     # Create a data file with a different shape
     mismatched_data = np.array(

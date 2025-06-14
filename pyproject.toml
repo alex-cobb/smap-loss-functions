@@ -54,3 +54,14 @@ testpaths = [
 # Black code formatter configuration
 line-length = 79
 skip-string-normalization = true
+
+
+[tool.pylint.messages_control]
+# Disable invalid-name to accommodate variable names from Koster et al (2017)
+disable = ["invalid-name", "use-dict-literal"]
+
+[tool.pylint.design]
+# Computational code often use more arguments
+max-args = 7
+max-positional-arguments = 7
+max-locals = 19

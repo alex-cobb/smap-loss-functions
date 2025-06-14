@@ -84,7 +84,6 @@ def write_geotiff(gridspec, data, outfile_path):
     srs.ImportFromEPSG(EASE_GRID_EPSG)
     dataset.SetProjection(srs.ExportToWkt())
     band = dataset.GetRasterBand(1)
-    band.SetNoDataValue(float('nan'))
     band.WriteArray(data)
     return 0
 
@@ -107,22 +106,17 @@ def assert_gridspec_covers_bbox(gridspec, bbox):
 
 
 def create_ease2_gridspec(ease_grid, start_col, start_row, thru_col, thru_row):
-    """ """
+    """Create a dict describing (part of) an EASE 2.0 grid"""
     cols = np.arange(start_col, thru_col + 1, dtype='int16')
     rows = np.arange(start_row, thru_row + 1, dtype='int16')
     assert cols[0] == start_col
     assert cols[-1] == thru_col
     assert rows[0] == start_row
     assert rows[-1] == thru_row
-    col_cartesian, row_cartesian = np.meshgrid(cols, rows)
-    ease_col = col_cartesian.flatten()
-    ease_row = row_cartesian.flatten()
-    lons = []
-    lats = []
-    for col, row in zip(ease_col, ease_row):
-        lon, lat = ease_grid.rc2lonlat(col=col, row=row)
-        lons.append(lon)
-        lats.append(lat)
+    ease_col, ease_row = [v.flatten() for v in np.meshgrid(cols, rows)]
+    lons, lats = zip(
+        *[ease_grid.rc2lonlat(col=col, row=row) for col, row in zip(ease_col, ease_row)]
+    )
     easex, easey = transform_lonlat_to_ease2(np.array(lons), np.array(lats))
     del lons, lats
     easex_seq = [easex[ease_col == c].mean() for c in cols]
@@ -132,7 +126,7 @@ def create_ease2_gridspec(ease_grid, start_col, start_row, thru_col, thru_row):
     xres = np.diff(easex_seq).mean()
     yres = np.diff(easey_seq).mean()
     del easex_seq, easey_seq
-    gridspec = dict(
+    return dict(
         w=min(easex) - xres / 2,
         n=max(easey) - yres / 2,
         e=max(easex) + xres / 2,
@@ -143,8 +137,6 @@ def create_ease2_gridspec(ease_grid, start_col, start_row, thru_col, thru_row):
         yres=yres,
         srs=f'EPSG:{6933}',
     )
-    del easex, easey
-    return gridspec
 
 
 def transform_lonlat_bbox_to_ease2(bbox):
