@@ -190,6 +190,15 @@ The package scripts facilitate work with daily precipitation data from GPM IMERG
     Center (GES
     DISC). [doi:10.5067/GPM/IMERGDF/DAY/07](https://doi.org/10.5067/GPM/IMERGDF/DAY/07).
 
+## Acknowledgments
+
+This code was initially developed by Alex Cobb, Raymond Samalo and Liu Junzhe with
+support from the National Research Foundation Singapore through the Singapore-MIT
+Alliance for Research and Technology’s Center for Environmental Sensing and Modeling
+interdisciplinary research program and from the Office for Space Technology and Industry
+(OSTIn), Singapore's national space office, through its Space Technology Development
+Programme (Grant No. S22-02007-STDP).
+
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.
